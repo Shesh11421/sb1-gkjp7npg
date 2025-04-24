@@ -1,16 +1,33 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { Search, Menu, X, Heart, User } from "lucide-react";
+import { Search, Menu, X, Heart, User, LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { Input } from "@/components/ui/input";
+import { useRouter } from "next/navigation";
+import type { User as AppUser } from "@/types"; // 👈 Import your User interface
 
 const Header = () => {
+  const router = useRouter();
   const [searchQuery, setSearchQuery] = useState("");
   const [isSearchOpen, setIsSearchOpen] = useState(false);
+  const [currentUser, setCurrentUser] = useState<AppUser | null>(null); // 👈 Specify the type
+
+  useEffect(() => {
+    const user = localStorage.getItem('currentUser');
+    if (user) {
+      setCurrentUser(JSON.parse(user));
+    }
+  }, []);
+
+  const handleLogout = () => {
+    localStorage.removeItem('currentUser');
+    setCurrentUser(null);
+    router.push('/login');
+  };
 
   return (
     <header className="sticky top-0 z-40 w-full border-b bg-white">
@@ -36,27 +53,41 @@ const Header = () => {
                 <Link href="/contact" className="text-lg font-medium transition-colors hover:text-primary">
                   Contact
                 </Link>
-                <div className="mt-4">
-                  <Link href="/login">
-                    <Button className="w-full bg-[#C55D5D] hover:bg-[#b34d4d] text-white">
-                      Log In
+                
+                {!currentUser ? (
+                  <>
+                    <div className="mt-4">
+                      <Link href="/login">
+                        <Button className="w-full bg-[#C55D5D] hover:bg-[#b34d4d] text-white">
+                          Log In
+                        </Button>
+                      </Link>
+                    </div>
+                    <div className="mt-2">
+                      <Link href="/signup">
+                        <Button variant="outline" className="w-full border-[#C55D5D] text-[#C55D5D]">
+                          Sign Up
+                        </Button>
+                      </Link>
+                    </div>
+                  </>
+                ) : (
+                  <div className="mt-4">
+                    <Button 
+                      onClick={handleLogout}
+                      className="w-full bg-[#C55D5D] hover:bg-[#b34d4d] text-white"
+                    >
+                      <LogOut className="mr-2 h-4 w-4" /> Logout
                     </Button>
-                  </Link>
-                </div>
-                <div className="mt-2">
-                  <Link href="/signup">
-                    <Button variant="outline" className="w-full border-[#C55D5D] text-[#C55D5D]">
-                      Sign Up
-                    </Button>
-                  </Link>
-                </div>
+                  </div>
+                )}
               </nav>
             </SheetContent>
           </Sheet>
 
           <Link href="/" className="ml-4 md:ml-0 flex items-center gap-2">
             <Image 
-              src="./assets/images/logo.png" 
+              src="/assets/images/logo.png" 
               alt="LocalFoodTruck.au" 
               width={40} 
               height={40} 
@@ -110,33 +141,52 @@ const Header = () => {
             </Button>
           )}
 
-          <Link href="/favorites">
-            <Button variant="ghost" size="icon" aria-label="Favorites">
-              <Heart className="h-5 w-5" />
-            </Button>
-          </Link>
+          {!currentUser ? (
+            <>
+              <div className="hidden sm:block">
+                <Link href="/login">
+                  <Button className="bg-[#C55D5D] hover:bg-[#b34d4d] text-white">
+                    Log In
+                  </Button>
+                </Link>
+              </div>
 
-          <div className="hidden sm:block">
-            <Link href="/login">
-              <Button className="bg-[#C55D5D] hover:bg-[#b34d4d] text-white">
-                Log In
+              <div className="hidden sm:block">
+                <Link href="/signup">
+                  <Button variant="outline" className="border-[#C55D5D] text-[#C55D5D]">
+                    Sign Up
+                  </Button>
+                </Link>
+              </div>
+            </>
+          ) : (
+            <>
+              {currentUser.role === "customer" && (
+                <>
+                  <Link href="/favorites">
+                    <Button variant="ghost" size="icon" aria-label="Favorites">
+                      <Heart className="h-5 w-5" />
+                    </Button>
+                  </Link>
+                  
+                  <Link href="/profile">
+                    <Button variant="ghost" size="icon" aria-label="Profile">
+                      <User className="h-5 w-5" />
+                    </Button>
+                  </Link>
+                </>
+              )}
+              
+              <Button 
+                variant="ghost" 
+                size="icon" 
+                aria-label="Logout"
+                onClick={handleLogout}
+              >
+                <LogOut className="h-5 w-5" />
               </Button>
-            </Link>
-          </div>
-
-          <div className="hidden sm:block">
-            <Link href="/signup">
-              <Button variant="outline" className="border-[#C55D5D] text-[#C55D5D]">
-                Sign Up
-              </Button>
-            </Link>
-          </div>
-
-          <Link href="/account" className="sm:hidden">
-            <Button variant="ghost" size="icon" aria-label="Account">
-              <User className="h-5 w-5" />
-            </Button>
-          </Link>
+            </>
+          )}
         </div>
       </div>
     </header>

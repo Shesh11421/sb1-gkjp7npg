@@ -60,11 +60,15 @@ export interface User {
   id: string;
   name: string;
   email: string;
-  image?: string;
+  password?: string; // Added password for authentication
+  image: string;
   savedTrucks: string[];
   reviews: string[];
-  role: 'customer' | 'owner';
+  role: "customer" | "owner";
+  truckName?: string; // For food truck owners
+  cuisine?: string; // For food truck owners
 }
+// types/index.ts
 
 export interface OwnerAnalytics {
   profileViews: number;

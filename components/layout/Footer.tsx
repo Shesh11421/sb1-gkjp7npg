@@ -53,7 +53,7 @@ const Footer = () => {
           <div>
             <h3 className="text-lg font-bold mb-4">For Food Truck Owners</h3>
             <ul className="space-y-2">
-              <li>
+              {/* <li>
                 <Link href="/owner/register" className="text-gray-600 hover:text-[#C55D5D]">
                   Register Your Truck
                 </Link>
@@ -62,7 +62,7 @@ const Footer = () => {
                 <Link href="/owner/dashboard" className="text-gray-600 hover:text-[#C55D5D]">
                   Owner Dashboard
                 </Link>
-              </li>
+              </li> */}
               <li>
                 <Link href="/owner/pricing" className="text-gray-600 hover:text-[#C55D5D]">
                   Pricing

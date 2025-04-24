@@ -1,217 +1,237 @@
 "use client";
 
 import { useState } from "react";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Eye, EyeOff, Loader2 } from "lucide-react";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { useForm } from "react-hook-form";
-import * as z from "zod";
+import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from "@/components/ui/form";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { users } from "@/data/users";
+import { User } from "@/types"; // Make sure path is correct
 
-type AuthType = "login" | "signup";
+interface AuthFormProps {
+  type: "login" | "signup";
+}
 
-const loginSchema = z.object({
-  email: z.string().email({ message: "Please enter a valid email address" }),
-  password: z.string().min(6, { message: "Password must be at least 6 characters" }),
-});
-
-const signupSchema = z.object({
-  name: z.string().min(2, { message: "Name must be at least 2 characters" }),
-  email: z.string().email({ message: "Please enter a valid email address" }),
-  password: z.string().min(6, { message: "Password must be at least 6 characters" }),
-  confirmPassword: z.string(),
-}).refine((data) => data.password === data.confirmPassword, {
-  message: "Passwords don't match",
-  path: ["confirmPassword"],
-});
-
-const AuthForm = ({ type }: { type: AuthType }) => {
+export default function AuthForm({ type }: AuthFormProps) {
   const router = useRouter();
-  const [isLoading, setIsLoading] = useState(false);
-  const [showPassword, setShowPassword] = useState(false);
-
   const isLogin = type === "login";
-  const formSchema = isLogin ? loginSchema : signupSchema;
+  const [error, setError] = useState("");
 
-  const form = useForm<z.infer<typeof formSchema>>({
-    resolver: zodResolver(formSchema),
-    defaultValues: isLogin
-      ? { email: "", password: "" }
-      : { name: "", email: "", password: "", confirmPassword: "" },
+  const [formData, setFormData] = useState<{
+    name: string;
+    email: string;
+    password: string;
+    confirmPassword: string;
+    role: "customer" | "owner";
+    truckName: string;
+    cuisine: string;
+  }>({
+    name: "",
+    email: "",
+    password: "",
+    confirmPassword: "",
+    role: "customer",
+    truckName: "",
+    cuisine: ""
   });
 
-  const onSubmit = async (values: z.infer<typeof formSchema>) => {
-    setIsLoading(true);
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({ ...prev, [name]: value }));
+  };
 
-    // Simulate API call
-    await new Promise((resolve) => setTimeout(resolve, 1500));
+  const handleSelectChange = (name: keyof typeof formData, value: string) => {
+    setFormData(prev => ({ ...prev, [name]: value }));
+  };
 
-    setIsLoading(false);
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    setError("");
 
-    // In a real app, this would handle authentication
-    // For now, we'll just redirect
     if (isLogin) {
-      router.push("/");
+      const user = users.find(user => user.email === formData.email);
+
+      if (!user || user.password !== formData.password) {
+        return setError("Invalid email or password");
+      }
+
+      localStorage.setItem("currentUser", JSON.stringify(user));
+
+      if (user.role === "owner") {
+        router.push("/owner/dashboard");
+      } else {
+        router.push("/");
+      }
     } else {
+      if (formData.password !== formData.confirmPassword) {
+        return setError("Passwords do not match");
+      }
+
+      if (users.some(user => user.email === formData.email)) {
+        return setError("Email already exists");
+      }
+
+      const newUser: User = {
+        id: `u${users.length + 1}`,
+        name: formData.name,
+        email: formData.email,
+        password: formData.password,
+        image: "https://images.pexels.com/photos/1126993/pexels-photo-1126993.jpeg",
+        savedTrucks: [],
+        reviews: [],
+        role: formData.role,
+        ...(formData.role === "owner" && {
+          truckName: formData.truckName,
+          cuisine: formData.cuisine
+        })
+      };
+
+      users.push(newUser);
+      console.log("Account created successfully", newUser);
       router.push("/login");
     }
   };
 
   return (
-    <Card className="w-full max-w-md mx-auto shadow-lg">
-      <CardHeader>
-        <CardTitle>{isLogin ? "Sign In" : "Create an Account"}</CardTitle>
-        <CardDescription>
-          {isLogin
-            ? "Sign in to your account to access all features"
-            : "Register to start finding and reviewing food trucks"}
-        </CardDescription>
-      </CardHeader>
-      <CardContent>
-        <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-            {!isLogin && (
-              <FormField
-                control={form.control}
-                name="name"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Name</FormLabel>
-                    <FormControl>
-                      <Input placeholder="John Doe" {...field} disabled={isLoading} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            )}
-
-            <FormField
-              control={form.control}
-              name="email"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Email</FormLabel>
-                  <FormControl>
-                    <Input
-                      placeholder="your@email.com"
-                      type="email"
-                      {...field}
-                      disabled={isLoading}
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              control={form.control}
-              name="password"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Password</FormLabel>
-                  <FormControl>
-                    <div className="relative">
-                      <Input
-                        placeholder="••••••••"
-                        type={showPassword ? "text" : "password"}
-                        {...field}
-                        disabled={isLoading}
-                      />
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="icon"
-                        className="absolute right-0 top-0 h-full px-3"
-                        onClick={() => setShowPassword(!showPassword)}
-                      >
-                        {showPassword ? (
-                          <EyeOff className="h-4 w-4 text-gray-500" />
-                        ) : (
-                          <Eye className="h-4 w-4 text-gray-500" />
-                        )}
-                      </Button>
-                    </div>
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            {!isLogin && (
-              <FormField
-                control={form.control}
-                name="confirmPassword"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Confirm Password</FormLabel>
-                    <FormControl>
-                      <div className="relative">
-                        <Input
-                          placeholder="••••••••"
-                          type={showPassword ? "text" : "password"}
-                          {...field}
-                          disabled={isLoading}
-                        />
-                      </div>
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            )}
-
-            <Button
-              type="submit"
-              className="w-full bg-[#C55D5D] hover:bg-[#b34d4d]"
-              disabled={isLoading}
-            >
-              {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              {isLogin ? "Sign In" : "Create Account"}
-            </Button>
-          </form>
-        </Form>
-      </CardContent>
-      <CardFooter className="flex flex-col space-y-4">
-        <div className="text-sm text-center text-gray-500">
-          {isLogin ? "Don't have an account? " : "Already have an account? "}
-          <Link
-            href={isLogin ? "/signup" : "/login"}
-            className="text-[#C55D5D] hover:underline font-medium"
-          >
-            {isLogin ? "Sign up" : "Sign in"}
-          </Link>
+    <form onSubmit={handleSubmit} className="space-y-4">
+      {error && (
+        <div className="p-3 bg-red-100 border border-red-400 text-red-700 rounded">
+          {error}
         </div>
-        {isLogin && (
-          <Link
-            href="/forgot-password"
-            className="text-sm text-center text-[#C55D5D] hover:underline"
-          >
-            Forgot your password?
-          </Link>
-        )}
-      </CardFooter>
-    </Card>
-  );
-};
+      )}
 
-export default AuthForm;
+      {!isLogin && (
+        <div className="space-y-2">
+          <Label htmlFor="name">Full Name</Label>
+          <Input
+            id="name"
+            name="name"
+            type="text"
+            required
+            value={formData.name}
+            onChange={handleChange}
+          />
+        </div>
+      )}
+
+      <div className="space-y-2">
+        <Label htmlFor="email">Email Address</Label>
+        <Input
+          id="email"
+          name="email"
+          type="email"
+          required
+          value={formData.email}
+          onChange={handleChange}
+        />
+      </div>
+
+      <div className="space-y-2">
+        <Label htmlFor="password">Password</Label>
+        <Input
+          id="password"
+          name="password"
+          type="password"
+          required
+          value={formData.password}
+          onChange={handleChange}
+        />
+      </div>
+
+      {!isLogin && (
+        <>
+          <div className="space-y-2">
+            <Label htmlFor="confirmPassword">Confirm Password</Label>
+            <Input
+              id="confirmPassword"
+              name="confirmPassword"
+              type="password"
+              required
+              value={formData.confirmPassword}
+              onChange={handleChange}
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="role">Role</Label>
+            <Select
+              name="role"
+              value={formData.role}
+              onValueChange={(value) => handleSelectChange("role", value as "customer" | "owner")}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Select your role" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="customer">Customer</SelectItem>
+                <SelectItem value="owner">Food Truck Owner</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          {formData.role === "owner" && (
+            <>
+              <div className="space-y-2">
+                <Label htmlFor="truckName">Food Truck Name</Label>
+                <Input
+                  id="truckName"
+                  name="truckName"
+                  type="text"
+                  required
+                  value={formData.truckName}
+                  onChange={handleChange}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="cuisine">Cuisine Type</Label>
+                <Select
+                  name="cuisine"
+                  value={formData.cuisine}
+                  onValueChange={(value) => handleSelectChange("cuisine", value)}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select cuisine type" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="italian">Italian</SelectItem>
+                    <SelectItem value="mexican">Mexican</SelectItem>
+                    <SelectItem value="indian">Indian</SelectItem>
+                    <SelectItem value="chinese">Chinese</SelectItem>
+                    <SelectItem value="japanese">Japanese</SelectItem>
+                    <SelectItem value="american">American</SelectItem>
+                    <SelectItem value="other">Other</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </>
+          )}
+        </>
+      )}
+
+      <Button type="submit" className="w-full bg-[#C55D5D] hover:bg-[#b34d4d] text-white">
+        {isLogin ? "Log In" : "Create Account"}
+      </Button>
+
+      <div className="text-center text-sm">
+        {isLogin ? (
+          <p>
+            Don&apos;t have an account?{" "}
+            <Link href="/signup" className="text-[#C55D5D] hover:underline">
+              Sign Up
+            </Link>
+          </p>
+        ) : (
+          <p>
+            Already have an account?{" "}
+            <Link href="/login" className="text-[#C55D5D] hover:underline">
+              Log In
+            </Link>
+          </p>
+        )}
+      </div>
+    </form>
+  );
+}
